@@ -1,13 +1,23 @@
-# Chart Reaper - AI-Powered Trading Chart Analyzer
+# Chart Sniper - AI-Powered Trading Chart Analyzer
 
 > Cut through the noise. Trade with precision.
 
-**Chart Reaper** is an intelligent trading analysis terminal that uses large language models (LLMs) to analyze financial chart screenshots and generate risk-managed trade setups. Upload a chart, select your timeframe, and let AI identify patterns, reversals, and optimal entry/exit points — all with built-in risk management.
+**Chart Sniper** is an intelligent trading analysis terminal that uses large language models (LLMs) to analyze financial chart screenshots and generate risk-managed trade setups. Upload a chart, select your timeframe, and let AI identify patterns, reversals, and optimal entry/exit points — all with built-in risk management.
+
+**Built by [Dean Krotzer](https://github.com/DeanKrotzer1111)**
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+---
+
+## Why I Built This
+
+Most retail trading tools either overwhelm users with lagging indicators or offer black-box signals with no reasoning. I wanted to build something different — a system that uses LLMs not just as classifiers, but as **structured reasoning engines** that break down chart analysis into discrete, auditable steps.
+
+The core engineering challenge was reliability: LLMs are non-deterministic, and a single API call can hallucinate patterns or flip direction based on prompt phrasing. Chart Sniper solves this with a **consensus voting pipeline** that runs multiple independent analyses, a **5-step evaluation framework** that prevents anchoring bias, and **structured output enforcement** that guarantees parseable results. The result is an AI system that explains *why* it sees a trade, not just *what* it sees.
 
 ---
 
@@ -22,7 +32,7 @@
 The system is provider-agnostic: swap between cloud APIs and local models without changing any analysis logic.
 
 ### Consensus-Based AI Analysis Pipeline
-Chart Reaper doesn't rely on a single AI call. It implements a **multi-call consensus voting system** to improve signal reliability:
+Chart Sniper doesn't rely on a single AI call. It implements a **multi-call consensus voting system** to improve signal reliability:
 
 1. **Price Extraction** — LLM reads OHLC data directly from the chart image
 2. **5-Step Technical Analysis** — Each call evaluates:
@@ -115,6 +125,36 @@ Built-in educational content covering:
 
 ---
 
+## Technical Deep Dive
+
+### LLM Provider Abstraction Layer
+
+The provider layer implements a unified interface across four LLM backends. Each provider has different request/response schemas (Anthropic's Messages API vs. OpenAI's Chat Completions format), but the abstraction normalizes these into a single `callLLM()` function that accepts a system prompt, message array, and image payload. Switching providers requires zero changes to the analysis logic upstream.
+
+### Multimodal Vision Pipeline
+
+Chart images are converted to base64 and sent as inline image content blocks. The system handles provider-specific image encoding differences:
+- **Anthropic** — Uses `image` content blocks with `source.type: "base64"`
+- **OpenAI** — Uses `image_url` content blocks with data URI encoding
+- **Local models** — Follows OpenAI-compatible format via proxy
+
+### Structured Output & Error Recovery
+
+LLM responses are notoriously inconsistent in format. The parsing layer handles:
+- JSON wrapped in markdown code fences (strips `` ```json `` wrappers)
+- Partial or malformed JSON from truncated responses
+- Graceful fallback when the model ignores formatting instructions
+- Timeout handling with 90-second per-call limits
+
+### Security Considerations
+
+- **No hardcoded secrets** — API keys are entered at runtime via the Settings UI and held in React state only (never persisted to disk or localStorage)
+- **No `.env` files** — All sensitive configuration is ephemeral and memory-only
+- **Proxy isolation** — Local LLM traffic is routed through Vite's dev proxy, keeping the backend endpoint unexposed to the browser
+- **`.gitignore` protection** — `.env`, `*.local`, and `dist/` are excluded from version control
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -138,8 +178,8 @@ Built-in educational content covering:
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/chart-reaper.git
-cd chart-reaper
+git clone https://github.com/DeanKrotzer1111/chart-sniper.git
+cd chart-sniper
 npm install
 ```
 
@@ -198,7 +238,7 @@ This approach significantly reduces false signals compared to single-call analys
 ## Project Structure
 
 ```
-chart-reaper/
+chart-sniper/
 ├── App.jsx            # Core application — components, analysis engine, UI
 ├── main.jsx           # React DOM entry point
 ├── index.html         # HTML shell with viewport and meta tags
@@ -209,24 +249,45 @@ chart-reaper/
 
 ---
 
-## Skills Demonstrated
+## AI Engineering Skills Demonstrated
 
-This project showcases the following AI engineering competencies:
+| Competency | Implementation |
+|-----------|---------------|
+| **LLM API Integration** | Multi-provider support (Anthropic, OpenAI, Minimax) with unified calling interface and provider-specific request/response normalization |
+| **Prompt Engineering** | Multi-step structured prompts with JSON output enforcement, bias mitigation, and priority-based decision rules |
+| **Multimodal AI** | Vision model integration — base64 image encoding pipeline for chart-to-analysis workflows |
+| **Consensus & Reliability** | Multi-call voting architecture with early-exit optimization and confidence calibration |
+| **Structured Output Parsing** | Robust JSON extraction from non-deterministic LLM responses with fallback handling |
+| **Provider Abstraction** | Swappable LLM backends (cloud and local) with zero changes to application logic |
+| **AI Safety & Guardrails** | Confidence capping, bias prevention through independent signal evaluation, clear limitations disclosure |
+| **Security Best Practices** | No hardcoded credentials, ephemeral API key handling, proxy isolation for local models |
+| **Frontend Engineering** | React 18 SPA with hooks-based state management, responsive design, and polished glassmorphism UI |
+| **Domain Modeling** | Financial risk management engine with timeframe-specific parameterization and position sizing |
 
-- **LLM API Integration** — Multi-provider support (Anthropic, OpenAI, Minimax) with unified interface
-- **Prompt Engineering** — Structured multi-step prompts with JSON output enforcement and bias mitigation
-- **Multimodal AI** — Vision model integration for image-to-analysis pipelines
-- **Consensus Systems** — Multi-call voting architecture for improved reliability
-- **AI Output Parsing** — Robust JSON extraction from LLM responses with error handling
-- **Provider Abstraction** — Swappable LLM backends without changing application logic
-- **Risk-Aware Design** — Confidence scoring, bias prevention, and clear limitations disclosure
-- **Full-Stack Development** — React SPA with API integration, state management, and polished UI/UX
+---
+
+## Roadmap
+
+- [ ] Persistent storage backend (trade journal survives page reloads)
+- [ ] User authentication and multi-user support
+- [ ] Real-time market data integration via WebSocket
+- [ ] Batch analysis across multiple timeframes
+- [ ] Advanced analytics (win rate by pattern, by timeframe, by provider)
+- [ ] Mobile-responsive layout
 
 ---
 
 ## Disclaimer
 
-This tool is for **educational purposes only**. Nothing produced by Chart Reaper constitutes financial advice. Always do your own research and consult with a qualified financial advisor before making any trading decisions. **NFA** (Not Financial Advice).
+This tool is for **educational purposes only**. Nothing produced by Chart Sniper constitutes financial advice. Always do your own research and consult with a qualified financial advisor before making any trading decisions. **NFA** (Not Financial Advice).
+
+---
+
+## Author
+
+**Dean Krotzer** — AI Engineer
+
+- GitHub: [github.com/DeanKrotzer1111](https://github.com/DeanKrotzer1111)
 
 ---
 

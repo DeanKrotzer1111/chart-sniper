@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CHART REAPER — Premium Trading Analysis Terminal
+// CHART SNIPER — Premium Trading Analysis Terminal
 // ═══════════════════════════════════════════════════════════════════════════
 
 const ACCENT = '#0ea5e9';
@@ -403,9 +403,9 @@ function Sidebar({ page, setPage, collapsed, setCollapsed }) {
       {/* Logo */}
       <div style={{ padding:'20px 18px', borderBottom:'1px solid rgba(56,68,100,0.15)', display:'flex', alignItems:'center', gap:'10px' }}>
         <div style={{ width:32, height:32, borderRadius:'10px', background:`linear-gradient(135deg, ${ACCENT}, ${ACCENT2})`,
-          display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', fontWeight:800, color:'#fff', flexShrink:0 }}>CR</div>
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', fontWeight:800, color:'#fff', flexShrink:0 }}>CS</div>
         <div style={{ overflow:'hidden', whiteSpace:'nowrap' }}>
-          <div style={{ fontSize:'16px', fontWeight:800, color:'#fff', letterSpacing:'-0.3px' }}>Chart Reaper</div>
+          <div style={{ fontSize:'16px', fontWeight:800, color:'#fff', letterSpacing:'-0.3px' }}>Chart Sniper</div>
           <div style={{ fontSize:'10px', color:GRAY, letterSpacing:'0.5px', marginTop:'-1px' }}>Cut through the noise. Trade with precision.</div>
         </div>
       </div>
