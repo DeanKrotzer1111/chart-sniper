@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "description": "NQ 1-min bullish engulfing at support",
+    "expected_direction": "BUY",
+    "expected_trend": "Bullish",
+    "image_path": null
+  },
+  {
+    "id": 2,
+    "description": "ES 5-min shooting star at resistance",
+    "expected_direction": "SELL",
+    "expected_trend": "Bearish",
+    "image_path": null
+  },
+  {
+    "id": 3,
+    "description": "NQ 15-min range-bound no clear signal",
+    "expected_direction": "NEUTRAL",
+    "expected_trend": "Ranging",
+    "image_path": null
+  }
+]

@@ -3,3 +3,21 @@ dist/
 .env
 *.local
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Data
+backend/data/
+
+# Docker
+.docker/
+
+# Environment
+.env
+.env.local

@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "description": "Initial 5-step analysis framework with bias prevention and structured decision rules",
+  "created": "2026-03-24",
+  "changes": "Initial release",
+  "template_vars": {
+    "analysis": ["timeframe", "mode"],
+    "price_read": [],
+    "system": []
+  }
+}

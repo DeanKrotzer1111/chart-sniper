@@ -1,0 +1,10 @@
+Find the OHLC header text at the top-left of this chart.
+It looks like: MNQH26 · 1   O 24914.25   H 24915.75   L 24911.50   C 24913.00
+The header always ends with the letter C followed by the close price.
+Read the number immediately after the letter C. That is the ONLY number you should output.
+Rules:
+  - Output ONLY the number after C — nothing else
+  - Do NOT output the O, H, or L values
+  - Do NOT output volume, percentage, or any other number
+  - If you see 'C 24913.00' → output: 24913.00
+  - If you see 'C 5168.70'  → output: 5168.70

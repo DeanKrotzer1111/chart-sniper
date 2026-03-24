@@ -2,13 +2,16 @@
 
 > Cut through the noise. Trade with precision.
 
-**Chart Sniper** is an intelligent trading analysis terminal that uses large language models (LLMs) to analyze financial chart screenshots and generate risk-managed trade setups. Upload a chart, select your timeframe, and let AI identify patterns, reversals, and optimal entry/exit points — all with built-in risk management.
+**Chart Sniper** is a full-stack AI trading analysis system that uses large language models to analyze financial chart screenshots and generate risk-managed trade setups. It features a FastAPI backend with consensus voting, a versioned prompt engineering framework, vector similarity search (RAG), structured observability logging, and an evaluation/benchmarking pipeline — all containerized with Docker and tested with 101 automated tests across frontend and backend.
 
 **Developed with AI by [Dean Krotzer](https://github.com/DeanKrotzer1111)**
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Tests](https://img.shields.io/badge/tests-101%20passing-brightgreen)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
-![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
+![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -43,19 +46,41 @@ Chart Sniper doesn't rely on a single AI call. It implements a **multi-call cons
    - **Structure breaks** (Change of Character / Break of Structure)
 3. **Consensus Vote** — Runs up to 3 independent analyses; early-exits if the first 2 agree. Agreement boosts confidence scores (+5% for 2/3, +12% for 3/3 consensus).
 
-### Structured Prompt Engineering
-The analysis pipeline uses carefully engineered system prompts that:
-- Enforce raw JSON output (no markdown wrapping)
-- Apply a priority-based decision rules engine across all 5 analysis steps
-- Prevent directional bias by requiring evidence from multiple independent signals
-- Cap confidence at 99% and require explicit reasoning for each step
+### Versioned Prompt Engineering
+Prompts are stored as versioned text templates (`v1/`, `v2/`, etc.) with a registry system that supports:
+- Template variable substitution (timeframe, mode)
+- LRU-cached loading for performance
+- Metadata tracking (version, description, creation date, changelog)
+- A/B testing across prompt versions with tracked results
+
+### FastAPI Backend with SSE Streaming
+Production-grade Python backend:
+- **REST API** — `/api/analyze`, `/api/history`, `/api/eval`
+- **Server-Sent Events** — `/api/analyze/stream` for real-time step-by-step updates
+- **Async throughout** — `httpx.AsyncClient` for non-blocking LLM calls
+- **SQLite persistence** — Analysis logs, trade journal, evaluation runs
+- **Structured logging** — Every LLM call tracked with latency, provider, consensus stats, and image hash
+
+### Vector Similarity Search (RAG)
+ChromaDB-powered vector store for finding similar past analyses:
+- Embeds completed analyses with metadata (direction, confidence, timeframe, outcome)
+- Retrieves similar historical setups when analyzing new charts
+- Filterable by trading mode and timeframe
+- Enables few-shot learning from past successful analyses
+
+### Evaluation & Benchmarking Framework
+Systematic measurement of AI analysis quality:
+- Labeled dataset of chart examples with expected directions
+- Automated benchmark runner that scores accuracy, precision, recall per direction
+- Confidence calibration scoring (does higher confidence correlate with correctness?)
+- Results persisted to DB for tracking prompt version improvements over time
 
 ### Risk Management Engine
-Automatic calculation of position sizing and trade levels based on:
-- Account balance and per-trade risk percentage
-- Timeframe-specific stop loss and take profit parameters
-- Risk:Reward ratio computation with TP1 and TP2 targets
-- Full customization with manual overrides for SL, TP, and risk %
+Automatic calculation of position sizing and trade levels:
+- 15 timeframe presets across scalp and swing modes
+- Stop Loss, Take Profit (TP1 + TP2), and dollar risk calculation
+- Risk:Reward ratio computation
+- Full customization with manual overrides
 
 ### Two Trading Modes
 
@@ -64,94 +89,44 @@ Automatic calculation of position sizing and trade levels based on:
 | **Scalp** | 1-sec to 5-min | 0.10% – 0.40% | 1.3:1 – 1.56:1 |
 | **Swing** | 15-min to Monthly | 0.50% – 2.00% | 1.5:1 |
 
-### Trade Journal & Performance Tracking
-- Log every analysis with outcome (Win / Loss / Not Taken)
-- Filter history by trading mode
-- Track win rate, profit factor, and performance over time
-- Visual statistics dashboard with win/loss breakdown
-
-### Learning Hub
-Built-in educational content covering:
-- Smart Money Concepts
-- Order Blocks & Fair Value Gaps
-- Break of Structure / Change of Character
-- Liquidity sweeps and institutional order flow
-
 ---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────┐
-│                  React Frontend                   │
-│              (Single Page Application)            │
-├──────────────────────────────────────────────────┤
-│                                                    │
-│  ┌─────────┐  ┌──────────┐  ┌─────────────────┐ │
-│  │Dashboard │  │ Trading  │  │  Journal/History │ │
-│  │  Page    │  │  Page    │  │     Pages        │ │
-│  └─────────┘  └────┬─────┘  └─────────────────┘ │
-│                     │                              │
-│            ┌────────▼────────┐                    │
-│            │  Analysis Engine │                    │
-│            │                  │                    │
-│            │ ┌──────────────┐│                    │
-│            │ │ Price Reader  ││                    │
-│            │ └──────┬───────┘│                    │
-│            │        ▼        │                    │
-│            │ ┌──────────────┐│                    │
-│            │ │ 5-Step Prompt ││ × 3 calls         │
-│            │ │  Framework   ││ (consensus)        │
-│            │ └──────┬───────┘│                    │
-│            │        ▼        │                    │
-│            │ ┌──────────────┐│                    │
-│            │ │ Consensus    ││                    │
-│            │ │ Voter        ││                    │
-│            │ └──────┬───────┘│                    │
-│            │        ▼        │                    │
-│            │ ┌──────────────┐│                    │
-│            │ │ Risk Manager ││                    │
-│            │ └──────────────┘│                    │
-│            └─────────────────┘                    │
-│                     │                              │
-├─────────────────────▼──────────────────────────────┤
-│              LLM Provider Layer                    │
-│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────────┐ │
-│  │ Claude │ │ GPT-4o │ │Minimax │ │ Local LLM  │ │
-│  │  API   │ │  API   │ │  API   │ │  (proxy)   │ │
-│  └────────┘ └────────┘ └────────┘ └────────────┘ │
-└──────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        React Frontend                            │
+│   Dashboard │ Trading │ Journal │ History │ Learning │ Settings  │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │  REST / SSE
+┌──────────────────────────▼──────────────────────────────────────┐
+│                      FastAPI Backend                             │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐│
+│  │   /api/      │  │  Services    │  │   Data Layer           ││
+│  │  analyze     │  │              │  │                        ││
+│  │  analyze/    │  │ ┌──────────┐ │  │ ┌──────────────────┐  ││
+│  │   stream     │──│ │   LLM    │ │  │ │  SQLite (logs,   │  ││
+│  │  history     │  │ │ Provider │ │  │ │  trades, evals)  │  ││
+│  │  history/    │  │ └──────────┘ │  │ └──────────────────┘  ││
+│  │   stats      │  │ ┌──────────┐ │  │ ┌──────────────────┐  ││
+│  │  eval/run    │  │ │Consensus │ │  │ │  ChromaDB        │  ││
+│  │  eval/       │  │ │  Voter   │ │  │ │  (vector store)  │  ││
+│  │   results    │  │ └──────────┘ │  │ └──────────────────┘  ││
+│  └──────────────┘  │ ┌──────────┐ │  └────────────────────────┘│
+│                    │ │   Risk   │ │                              │
+│  ┌──────────────┐  │ │ Manager  │ │  ┌────────────────────────┐│
+│  │   Prompt     │  │ └──────────┘ │  │   Eval Framework      ││
+│  │  Registry    │  │ ┌──────────┐ │  │  Benchmark runner     ││
+│  │  v1/ v2/ ... │  │ │ Vector   │ │  │  Metrics calculator   ││
+│  └──────────────┘  │ │  Store   │ │  │  Labeled datasets     ││
+│                    │ └──────────┘ │  └────────────────────────┘│
+│                    └──────────────┘                              │
+├─────────────────────────────────────────────────────────────────┤
+│                    LLM Provider Layer                            │
+│     Claude API  │  OpenAI API  │  Minimax API  │  Local LLM    │
+└─────────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## Technical Deep Dive
-
-### LLM Provider Abstraction Layer
-
-The provider layer implements a unified interface across four LLM backends. Each provider has different request/response schemas (Anthropic's Messages API vs. OpenAI's Chat Completions format), but the abstraction normalizes these into a single `callLLM()` function that accepts a system prompt, message array, and image payload. Switching providers requires zero changes to the analysis logic upstream.
-
-### Multimodal Vision Pipeline
-
-Chart images are converted to base64 and sent as inline image content blocks. The system handles provider-specific image encoding differences:
-- **Anthropic** — Uses `image` content blocks with `source.type: "base64"`
-- **OpenAI** — Uses `image_url` content blocks with data URI encoding
-- **Local models** — Follows OpenAI-compatible format via proxy
-
-### Structured Output & Error Recovery
-
-LLM responses are notoriously inconsistent in format. The parsing layer handles:
-- JSON wrapped in markdown code fences (strips `` ```json `` wrappers)
-- Partial or malformed JSON from truncated responses
-- Graceful fallback when the model ignores formatting instructions
-- Timeout handling with 90-second per-call limits
-
-### Security Considerations
-
-- **No hardcoded secrets** — API keys are entered at runtime via the Settings UI and held in React state only (never persisted to disk or localStorage)
-- **No `.env` files** — All sensitive configuration is ephemeral and memory-only
-- **Proxy isolation** — Local LLM traffic is routed through Vite's dev proxy, keeping the backend endpoint unexposed to the browser
-- **`.gitignore` protection** — `.env`, `*.local`, and `dist/` are excluded from version control
 
 ---
 
@@ -159,65 +134,88 @@ LLM responses are notoriously inconsistent in format. The parsing layer handles:
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | React 18.2 (Hooks-based, no class components) |
-| **Build Tool** | Vite 5.4 with HMR |
+| **Frontend** | React 18.2, Vite 5.4, CSS-in-JS |
+| **Backend** | FastAPI 0.115, Python 3.9+, async/await |
 | **AI/LLM** | Claude API, OpenAI API, Minimax API, Local LLM |
-| **Vision AI** | Base64 image encoding for multimodal LLM analysis |
-| **Styling** | Custom CSS-in-JS with glassmorphism design system |
-| **State** | React useState/useEffect (lightweight, no Redux) |
-| **Proxy** | Vite dev server proxy for local LLM routing |
+| **Vision AI** | Base64 image encoding for multimodal analysis |
+| **Vector DB** | ChromaDB 0.5 for similarity search (RAG) |
+| **Database** | SQLite via aiosqlite (async) |
+| **HTTP Client** | httpx (async, non-blocking) |
+| **Containerization** | Docker + Docker Compose |
+| **CI/CD** | GitHub Actions (tests, lint, Docker build) |
+| **Testing** | Vitest (frontend), pytest + pytest-asyncio (backend) |
+| **Linting** | Ruff (Python) |
 
 ---
 
 ## Getting Started
 
-### Prerequisites
-- Node.js 18+
-- An API key from at least one supported provider (Anthropic, OpenAI, or Minimax) — or a local LLM server
-
-### Installation
+### Quick Start with Docker
 
 ```bash
 git clone https://github.com/DeanKrotzer1111/chart-sniper.git
 cd chart-sniper
-npm install
+cp .env.example .env
+# Add your API keys to .env
+docker compose up --build
 ```
 
-### Running the App
+Frontend: `http://localhost:3000` | Backend API: `http://localhost:8000/health`
+
+### Manual Setup
+
+**Frontend:**
+```bash
+npm install
+npm run dev          # → http://localhost:3000
+```
+
+**Backend:**
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+### Running Tests
 
 ```bash
-npm run dev
-```
+# Frontend (46 tests)
+npm test
 
-The app starts at `http://localhost:3000`.
+# Backend (55 tests)
+cd backend && source .venv/bin/activate
+python -m pytest tests/ -v
+```
 
 ### Configuration
 
-1. Navigate to **Settings** in the sidebar
-2. Select your AI provider
-3. Enter your API key
-4. Set your account balance for risk calculations
-5. Upload a chart and start analyzing
-
-### Using a Local LLM
-
-If running a self-hosted model (e.g., via Ollama, LM Studio, or vLLM):
-
-1. Start your LLM server on port `8080` (or configure in Settings)
-2. Select **"Local LLM"** as the provider
-3. The Vite proxy routes `/llm` requests to your local server automatically
+1. Copy `.env.example` to `.env` and add API keys, OR
+2. Use the **Settings** page in the UI to enter keys at runtime (memory-only, never saved to disk)
 
 ---
 
-## How the AI Analysis Works
+## API Endpoints
 
-### Prompt Engineering Strategy
+| Method | Endpoint | Description |
+|--------|---------|-------------|
+| `GET` | `/health` | Service health check |
+| `POST` | `/api/analyze` | Run chart analysis with consensus voting |
+| `POST` | `/api/analyze/stream` | Stream analysis progress via SSE |
+| `GET` | `/api/history` | List all trade records |
+| `POST` | `/api/history` | Save a trade record |
+| `GET` | `/api/history/stats` | Aggregated trade statistics |
+| `POST` | `/api/eval/run` | Run evaluation benchmark |
+| `GET` | `/api/eval/results` | List past evaluation runs |
 
-Each analysis call sends a carefully structured system prompt that forces the LLM through a **5-step evaluation framework** before making any directional call. This prevents common LLM failure modes like:
+---
 
-- **Anchoring bias** — The model must evaluate trend, patterns, levels, momentum, and structure independently before combining signals
-- **Hallucinated confidence** — Confidence scores must be justified per-step and are capped at 99%
-- **Format instability** — Strict JSON-only output instructions with no markdown wrapping
+## Technical Deep Dive
+
+### LLM Provider Abstraction Layer
+
+The `LLMProvider` class normalizes four different API formats behind a single `call()` method. Anthropic uses a Messages API with image content blocks; OpenAI uses Chat Completions with `image_url` data URIs. The abstraction handles these differences so the consensus engine never needs to know which provider it's talking to.
 
 ### Consensus Voting Algorithm
 
@@ -228,10 +226,44 @@ Call 2 → Direction + Confidence
   └── If Call 1 != Call 2 → Run Call 3
 Call 3 → Direction + Confidence
   ├── Majority vote wins (2/3 or 3/3)
-  └── 3/3 unanimous → +12% confidence boost
+  └── 3/3 unanimous → +12% confidence boost (capped at 99%)
 ```
 
-This approach significantly reduces false signals compared to single-call analysis.
+### Structured Output Parsing
+
+LLM responses are notoriously inconsistent. The `parse_json()` function handles:
+- JSON wrapped in markdown code fences
+- Trailing commas (common LLM mistake)
+- JSON embedded in surrounding explanatory text
+- Graceful `None` return on unparseable responses
+
+### Prompt Versioning System
+
+```
+backend/app/prompts/
+├── v1/
+│   ├── analysis.txt    # 5-step framework with {timeframe} and {mode} vars
+│   ├── price_read.txt  # OHLC extraction prompt
+│   ├── system.txt      # JSON-only system prompt
+│   └── meta.json       # Version metadata and changelog
+├── v2/                 # Future prompt experiments
+└── registry.py         # Load, render, and version-manage prompts
+```
+
+### Observability & Logging
+
+Every analysis call is logged to SQLite with:
+- Provider used, prompt version, timeframe, mode
+- Direction, confidence, consensus agreement ratio
+- Latency in milliseconds
+- Image hash (for deduplication, not the image itself)
+
+### Security
+
+- **No hardcoded secrets** — API keys from env vars or runtime UI input
+- **No `.env` in git** — `.gitignore` blocks `.env`, `*.local`, `backend/data/`
+- **Proxy isolation** — Local LLM traffic routed through server-side proxy
+- **No API keys persisted** — Frontend holds keys in React state only (memory)
 
 ---
 
@@ -239,12 +271,47 @@ This approach significantly reduces false signals compared to single-call analys
 
 ```
 chart-sniper/
-├── App.jsx            # Core application — components, analysis engine, UI
-├── main.jsx           # React DOM entry point
-├── index.html         # HTML shell with viewport and meta tags
-├── vite.config.js     # Vite config with proxy and port settings
-├── package.json       # Dependencies and scripts
-└── README.md          # Documentation
+├── App.jsx                          # React frontend application
+├── analysis.js                      # Extracted analysis logic (testable)
+├── analysis.test.js                 # Frontend unit tests (46 tests)
+├── main.jsx                         # React entry point
+├── index.html                       # HTML shell
+├── vite.config.js                   # Vite config with proxy
+├── package.json                     # Frontend dependencies
+│
+├── backend/
+│   ├── app/
+│   │   ├── main.py                  # FastAPI app with lifespan, CORS, routers
+│   │   ├── models/
+│   │   │   └── schemas.py           # Pydantic request/response models
+│   │   ├── routes/
+│   │   │   ├── analysis.py          # /api/analyze + SSE streaming
+│   │   │   ├── history.py           # /api/history CRUD
+│   │   │   └── eval.py              # /api/eval benchmark runner
+│   │   ├── services/
+│   │   │   ├── llm.py               # Multi-provider LLM abstraction
+│   │   │   ├── consensus.py         # Voting engine + JSON parser
+│   │   │   ├── risk.py              # Risk management + timeframe params
+│   │   │   └── vector.py            # ChromaDB vector store (RAG)
+│   │   ├── prompts/
+│   │   │   ├── registry.py          # Prompt version management
+│   │   │   └── v1/                  # Versioned prompt templates
+│   │   ├── db/
+│   │   │   └── database.py          # SQLite async (logs, trades, evals)
+│   │   └── eval/
+│   │       ├── benchmark.py         # Evaluation framework
+│   │       └── datasets/labels.json # Labeled test data
+│   ├── tests/                       # Backend tests (55 tests)
+│   ├── requirements.txt             # Python dependencies
+│   └── Dockerfile                   # Backend container
+│
+├── docker-compose.yml               # Full-stack orchestration
+├── Dockerfile.frontend              # Frontend container (nginx)
+├── nginx.conf                       # Reverse proxy config
+├── .github/workflows/ci.yml         # CI pipeline
+├── .env.example                     # Environment template
+├── LICENSE                          # MIT License
+└── README.md
 ```
 
 ---
@@ -253,26 +320,34 @@ chart-sniper/
 
 | Competency | Implementation |
 |-----------|---------------|
-| **LLM API Integration** | Multi-provider support (Anthropic, OpenAI, Minimax) with unified calling interface and provider-specific request/response normalization |
-| **Prompt Engineering** | Multi-step structured prompts with JSON output enforcement, bias mitigation, and priority-based decision rules |
-| **Multimodal AI** | Vision model integration — base64 image encoding pipeline for chart-to-analysis workflows |
-| **Consensus & Reliability** | Multi-call voting architecture with early-exit optimization and confidence calibration |
-| **Structured Output Parsing** | Robust JSON extraction from non-deterministic LLM responses with fallback handling |
-| **Provider Abstraction** | Swappable LLM backends (cloud and local) with zero changes to application logic |
-| **AI Safety & Guardrails** | Confidence capping, bias prevention through independent signal evaluation, clear limitations disclosure |
-| **Security Best Practices** | No hardcoded credentials, ephemeral API key handling, proxy isolation for local models |
-| **Frontend Engineering** | React 18 SPA with hooks-based state management, responsive design, and polished glassmorphism UI |
-| **Domain Modeling** | Financial risk management engine with timeframe-specific parameterization and position sizing |
+| **LLM API Integration** | Multi-provider abstraction (Anthropic, OpenAI, Minimax, Local) with unified async interface |
+| **Prompt Engineering** | Versioned multi-step prompts with bias mitigation, structured output enforcement, and A/B testability |
+| **Multimodal AI** | Vision model pipelines — base64 image encoding with provider-specific format handling |
+| **Consensus Systems** | Multi-call voting with early-exit optimization and confidence calibration |
+| **RAG (Retrieval-Augmented Generation)** | ChromaDB vector store for semantic similarity search over past analyses |
+| **AI Evaluation** | Benchmark framework with accuracy, precision, recall, and confidence calibration metrics |
+| **Structured Output Parsing** | Robust JSON extraction from non-deterministic LLM responses |
+| **AI Observability** | Per-call logging with latency, provider, consensus stats, and prompt version tracking |
+| **Backend Engineering** | FastAPI with async SQLite, SSE streaming, Pydantic validation |
+| **DevOps** | Docker Compose, GitHub Actions CI (tests + lint + build), nginx reverse proxy |
+| **Testing** | 101 automated tests across frontend (Vitest) and backend (pytest) |
+| **Security** | No hardcoded credentials, ephemeral key handling, proxy isolation |
 
 ---
 
 ## Roadmap
 
-- [ ] Persistent storage backend (trade journal survives page reloads)
+- [x] FastAPI backend with persistent storage
+- [x] Versioned prompt engineering framework
+- [x] Vector similarity search (RAG) with ChromaDB
+- [x] Evaluation/benchmarking pipeline
+- [x] Docker containerization
+- [x] CI/CD with GitHub Actions
+- [x] 101 automated tests
 - [ ] User authentication and multi-user support
 - [ ] Real-time market data integration via WebSocket
 - [ ] Batch analysis across multiple timeframes
-- [ ] Advanced analytics (win rate by pattern, by timeframe, by provider)
+- [ ] Advanced analytics dashboard (win rate by pattern, provider, timeframe)
 - [ ] Mobile-responsive layout
 
 ---
