@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import os
 import time
@@ -8,17 +6,22 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, Request
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.models.schemas import AnalysisRequest, AnalysisResponse
 from app.services.llm import LLMProvider
 from app.services.consensus import run_consensus_analysis
 from app.services.risk import get_timeframe_params, calc_levels
+from app.services.cache import get_cache
+from app.services.cost import AnalysisCost, estimate_image_tokens, estimate_text_tokens
 from app.db.database import log_analysis
 
 router = APIRouter(prefix="/api")
+limiter = Limiter(key_func=get_remote_address)
 
 
-def _resolve_api_key(provider: str, header_key: str | None) -> str | None:
+def _resolve_api_key(provider: str, header_key: Optional[str]) -> Optional[str]:
     """Resolve API key from header or environment variable."""
     if header_key:
         return header_key
@@ -32,11 +35,21 @@ def _resolve_api_key(provider: str, header_key: str | None) -> str | None:
 
 
 @router.post("/analyze", response_model=AnalysisResponse)
+@limiter.limit("10/minute")
 async def analyze_chart(
+    request: Request,
     body: AnalysisRequest,
     x_api_key: Optional[str] = Header(None),
 ):
     """Run chart analysis with consensus voting and risk calculation."""
+    cache = get_cache()
+    prompt_version = "v1"
+
+    # Check cache first
+    cached_result = cache.get(body.image_base64, body.provider, prompt_version, body.timeframe, body.mode)
+    if cached_result is not None:
+        return AnalysisResponse(**cached_result, cached=True)
+
     api_key = _resolve_api_key(body.provider, x_api_key)
     llm = LLMProvider(provider=body.provider, api_key=api_key)
 
@@ -57,9 +70,18 @@ async def analyze_chart(
     direction = result.get("direction", "NEUTRAL")
     levels = calc_levels(price, direction, tf_params, body.account_balance)
 
+    # Estimate cost
+    cost_tracker = AnalysisCost()
+    input_tokens = estimate_image_tokens(len(body.image_base64)) + estimate_text_tokens(body.timeframe + body.mode)
+    output_tokens = estimate_text_tokens(json.dumps(result))
+    consensus = result.get("consensus", {})
+    num_calls = consensus.get("total", 1)
+    for _ in range(num_calls):
+        cost_tracker.add_call(body.provider, input_tokens, output_tokens)
+    cost_info = cost_tracker.to_dict()
+
     # Log to database
     image_hash = hashlib.md5(body.image_base64.encode()).hexdigest()[:16]
-    consensus = result.get("consensus", {})
     await log_analysis(
         provider=body.provider,
         prompt_version=result.get("prompt_version", "v1"),
@@ -73,7 +95,7 @@ async def analyze_chart(
         image_hash=image_hash,
     )
 
-    return AnalysisResponse(
+    response_data = dict(
         direction=direction,
         confidence=result.get("confidence", 0),
         currentPrice=price,
@@ -92,11 +114,25 @@ async def analyze_chart(
         prompt_version=result.get("prompt_version", "v1"),
         provider_used=body.provider,
         latency_ms=latency_ms,
+        cost=cost_info,
     )
+
+    # Store in cache
+    cache.put(body.image_base64, body.provider, prompt_version, body.timeframe, body.mode, response_data)
+
+    return AnalysisResponse(**response_data)
+
+
+@router.get("/cache/stats")
+async def cache_stats():
+    """Return LLM response cache statistics."""
+    return get_cache().stats()
 
 
 @router.post("/analyze/stream")
+@limiter.limit("10/minute")
 async def analyze_chart_stream(
+    request: Request,
     body: AnalysisRequest,
     x_api_key: Optional[str] = Header(None),
 ):

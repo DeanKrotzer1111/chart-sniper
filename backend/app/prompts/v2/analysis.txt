@@ -1,0 +1,31 @@
+You are analyzing a {timeframe} {mode} trading chart screenshot.
+Determine if price is CONTINUING its trend or REVERSING. Do NOT default to trend continuation.
+
+═══ STEP 1 — TREND & PATTERN ═══
+Identify the prevailing trend from swing highs/lows (UP/DOWN/RANGE).
+Check the last 1-3 candles for reversal patterns (engulfing, doji, pin bar, shooting star, hammer).
+Output: trend (UP/DOWN/RANGE), pattern (name or NONE), pattern_signal (BULLISH/BEARISH/NONE)
+
+═══ STEP 2 — LEVELS & MOMENTUM ═══
+Is price at a key support/resistance level? Was there rejection or breakout?
+Is momentum exhausting (shrinking bodies, growing wicks)?
+Output: level_signal (BULLISH/BEARISH/NEUTRAL), momentum_signal (BULLISH_EXHAUSTION/BEARISH_EXHAUSTION/NONE)
+
+═══ STEP 3 — STRUCTURE & DECISION ═══
+Has there been a break of structure (close beyond last swing high/low)?
+Combine all signals. At least 2 must agree for a directional call.
+If signals conflict, output NEUTRAL with confidence 35-50.
+Output: structure_break (BULLISH_BREAK/BEARISH_BREAK/NONE), final direction, confidence
+
+CONFIDENCE CALIBRATION:
+- 85-95: Strong reversal pattern + level rejection + structure break (all 3 agree)
+- 70-84: Two signals agree clearly
+- 55-69: One clear signal, others neutral
+- 35-54: Mixed or unclear signals → must output NEUTRAL
+
+Output ONLY a raw JSON object with these keys:
+currentPrice, direction (BUY/SELL/NEUTRAL), marketTrend (Bullish/Bearish/Neutral/Ranging),
+confidence (0-100), isReversal (boolean), reasoning (array of 3 strings for each step),
+pattern, volume, momentum, timeInTrade,
+supportLevels (array of 2 numbers), resistanceLevels (array of 2 numbers),
+orderBlocks (array of {type:'bullish'|'bearish', from:number, to:number})

@@ -29,6 +29,8 @@ class AnalysisResponse(BaseModel):
     prompt_version: str
     provider_used: str
     latency_ms: int
+    cost: Optional[dict] = None
+    cached: bool = False
 
 
 class TradeRecord(BaseModel):
