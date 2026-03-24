@@ -2,12 +2,12 @@
 
 > Cut through the noise. Trade with precision.
 
-**Chart Sniper** is a full-stack AI trading analysis system that uses large language models to analyze financial chart screenshots and generate risk-managed trade setups. It features a FastAPI backend with consensus voting, a versioned prompt engineering framework, vector similarity search (RAG), structured observability logging, and an evaluation/benchmarking pipeline — all containerized with Docker and tested with 101 automated tests across frontend and backend.
+**Chart Sniper** is a full-stack AI trading analysis system that uses large language models to analyze financial chart screenshots and generate risk-managed trade setups. It features a FastAPI backend with consensus voting, a versioned prompt engineering framework, vector similarity search (RAG), structured observability logging, and an evaluation/benchmarking pipeline — all containerized with Docker and tested with 107 automated tests (unit + integration) across frontend and backend.
 
 **Developed with AI by [Dean Krotzer](https://github.com/DeanKrotzer1111)**
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
-![Tests](https://img.shields.io/badge/tests-101%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python)
@@ -143,6 +143,10 @@ Automatic calculation of position sizing and trade levels:
 | **HTTP Client** | httpx (async, non-blocking) |
 | **Containerization** | Docker + Docker Compose |
 | **CI/CD** | GitHub Actions (tests, lint, Docker build) |
+| **Caching** | In-memory LRU with TTL for LLM response deduplication |
+| **Rate Limiting** | slowapi (10 req/min on analysis endpoints) |
+| **Cost Tracking** | Per-call token estimation and USD cost per provider |
+| **Observability** | OpenTelemetry FastAPI instrumentation |
 | **Testing** | Vitest (frontend), pytest + pytest-asyncio (backend) |
 | **Linting** | Ruff (Python) |
 
@@ -181,12 +185,12 @@ uvicorn app.main:app --reload --port 8000
 ### Running Tests
 
 ```bash
-# Frontend (46 tests)
-npm test
+# All tests (107 total)
+make test
 
-# Backend (55 tests)
-cd backend && source .venv/bin/activate
-python -m pytest tests/ -v
+# Or individually:
+npm test                    # Frontend: 46 unit tests
+cd backend && make test     # Backend: 61 tests (unit + integration)
 ```
 
 ### Configuration
@@ -208,6 +212,7 @@ python -m pytest tests/ -v
 | `GET` | `/api/history/stats` | Aggregated trade statistics |
 | `POST` | `/api/eval/run` | Run evaluation benchmark |
 | `GET` | `/api/eval/results` | List past evaluation runs |
+| `GET` | `/api/cache/stats` | LLM response cache hit/miss statistics |
 
 ---
 
@@ -292,22 +297,27 @@ chart-sniper/
 │   │   │   ├── llm.py               # Multi-provider LLM abstraction
 │   │   │   ├── consensus.py         # Voting engine + JSON parser
 │   │   │   ├── risk.py              # Risk management + timeframe params
-│   │   │   └── vector.py            # ChromaDB vector store (RAG)
+│   │   │   ├── vector.py            # ChromaDB vector store (RAG)
+│   │   │   ├── cache.py             # LRU response cache with TTL
+│   │   │   └── cost.py              # Token usage + cost estimation
 │   │   ├── prompts/
 │   │   │   ├── registry.py          # Prompt version management
-│   │   │   └── v1/                  # Versioned prompt templates
+│   │   │   ├── v1/                  # 5-step analysis framework
+│   │   │   └── v2/                  # Simplified 3-step with confidence calibration
 │   │   ├── db/
 │   │   │   └── database.py          # SQLite async (logs, trades, evals)
 │   │   └── eval/
 │   │       ├── benchmark.py         # Evaluation framework
 │   │       └── datasets/labels.json # Labeled test data
-│   ├── tests/                       # Backend tests (55 tests)
+│   ├── tests/                       # Backend tests (61 tests)
 │   ├── requirements.txt             # Python dependencies
 │   └── Dockerfile                   # Backend container
 │
 ├── docker-compose.yml               # Full-stack orchestration
 ├── Dockerfile.frontend              # Frontend container (nginx)
 ├── nginx.conf                       # Reverse proxy config
+├── Makefile                         # Dev, test, lint, docker commands
+├── BLOG.md                          # Technical blog post
 ├── .github/workflows/ci.yml         # CI pipeline
 ├── .env.example                     # Environment template
 ├── LICENSE                          # MIT License
@@ -328,10 +338,13 @@ chart-sniper/
 | **AI Evaluation** | Benchmark framework with accuracy, precision, recall, and confidence calibration metrics |
 | **Structured Output Parsing** | Robust JSON extraction from non-deterministic LLM responses |
 | **AI Observability** | Per-call logging with latency, provider, consensus stats, and prompt version tracking |
-| **Backend Engineering** | FastAPI with async SQLite, SSE streaming, Pydantic validation |
-| **DevOps** | Docker Compose, GitHub Actions CI (tests + lint + build), nginx reverse proxy |
-| **Testing** | 101 automated tests across frontend (Vitest) and backend (pytest) |
-| **Security** | No hardcoded credentials, ephemeral key handling, proxy isolation |
+| **LLM Cost Management** | Per-call token estimation and USD cost tracking by provider |
+| **Response Caching** | LRU cache with TTL keyed by image hash + provider + prompt version |
+| **Rate Limiting** | slowapi-based request throttling on analysis endpoints |
+| **Backend Engineering** | FastAPI with async SQLite, SSE streaming, Pydantic validation, OpenTelemetry |
+| **DevOps** | Docker Compose, GitHub Actions CI (tests + lint + build), nginx reverse proxy, Makefile |
+| **Testing** | 107 automated tests: unit tests (Vitest + pytest) and integration tests with mocked LLM |
+| **Security** | No hardcoded credentials, ephemeral key handling, proxy isolation, rate limiting |
 
 ---
 
@@ -343,7 +356,15 @@ chart-sniper/
 - [x] Evaluation/benchmarking pipeline
 - [x] Docker containerization
 - [x] CI/CD with GitHub Actions
-- [x] 101 automated tests
+- [x] 107 automated tests (unit + integration)
+- [x] Component-based frontend architecture (14 modules)
+- [x] v2 prompt version with confidence calibration
+- [x] LLM response caching with hit rate tracking
+- [x] Cost estimation per analysis call
+- [x] Rate limiting on API endpoints
+- [x] OpenTelemetry instrumentation
+- [x] Makefile for dev workflow
+- [x] Technical blog post
 - [ ] User authentication and multi-user support
 - [ ] Real-time market data integration via WebSocket
 - [ ] Batch analysis across multiple timeframes
