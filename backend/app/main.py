@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from app.db.database import init_db
-from app.routes import analysis, history, eval
+from app.routes import analysis, history, eval, auth, billing
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -16,6 +16,8 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    from app.services.billing import init_billing_table
+    await init_billing_table()
     yield
 
 
@@ -40,6 +42,8 @@ app.add_middleware(
 app.include_router(analysis.router)
 app.include_router(history.router)
 app.include_router(eval.router)
+app.include_router(auth.router)
+app.include_router(billing.router)
 
 FastAPIInstrumentor.instrument_app(app)
 

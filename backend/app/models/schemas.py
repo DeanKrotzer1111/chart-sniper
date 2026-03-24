@@ -8,6 +8,7 @@ class AnalysisRequest(BaseModel):
     timeframe: str
     mode: str = Field(..., pattern="^(scalp|swing)$")
     account_balance: float = 10000.0
+    strategy: str = "cost_optimized"
 
 
 class AnalysisResponse(BaseModel):
@@ -30,6 +31,7 @@ class AnalysisResponse(BaseModel):
     provider_used: str
     latency_ms: int
     cost: Optional[dict] = None
+    routing: Optional[dict] = None
     cached: bool = False
 
 

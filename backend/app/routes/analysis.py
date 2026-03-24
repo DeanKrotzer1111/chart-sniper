@@ -12,6 +12,7 @@ from slowapi.util import get_remote_address
 from app.models.schemas import AnalysisRequest, AnalysisResponse
 from app.services.llm import LLMProvider
 from app.services.consensus import run_consensus_analysis
+from app.services.router import route_analysis
 from app.services.risk import get_timeframe_params, calc_levels
 from app.services.cache import get_cache
 from app.services.cost import AnalysisCost, estimate_image_tokens, estimate_text_tokens
@@ -51,16 +52,21 @@ async def analyze_chart(
         return AnalysisResponse(**cached_result, cached=True)
 
     api_key = _resolve_api_key(body.provider, x_api_key)
-    llm = LLMProvider(provider=body.provider, api_key=api_key)
 
     start = time.perf_counter()
 
-    result = await run_consensus_analysis(
-        llm=llm,
+    # Use smart model routing
+    routing_result = await route_analysis(
+        provider=body.provider,
+        api_key=api_key,
         image_b64=body.image_base64,
         timeframe=body.timeframe,
         mode=body.mode,
+        strategy=body.strategy,
+        prompt_version=prompt_version,
     )
+    result = routing_result.result
+    routing_info = routing_result.to_dict()
 
     latency_ms = int((time.perf_counter() - start) * 1000)
 
@@ -115,6 +121,7 @@ async def analyze_chart(
         provider_used=body.provider,
         latency_ms=latency_ms,
         cost=cost_info,
+        routing=routing_info,
     )
 
     # Store in cache

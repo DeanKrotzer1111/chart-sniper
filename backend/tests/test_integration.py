@@ -160,33 +160,38 @@ class TestAPIEndpointIntegration:
     @pytest.mark.asyncio
     async def test_analyze_endpoint_with_mock(self):
         """Test POST /api/analyze returns proper response shape."""
-        with patch("app.services.consensus.LLMProvider") as MockProvider:
-            mock_instance = AsyncMock()
-            mock_instance.call = AsyncMock(side_effect=[
-                MOCK_PRICE_RESPONSE,
-                MOCK_ANALYSIS_RESPONSE,
-                MOCK_ANALYSIS_RESPONSE,
-            ])
-            MockProvider.return_value = mock_instance
+        from app.services.router import RoutingResult
 
-            with patch("app.routes.analysis.LLMProvider", MockProvider):
-                transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
-                    response = await client.post("/api/analyze", json={
-                        "provider": "local",
-                        "image_base64": "dGVzdA==",
-                        "timeframe": "1-Min",
-                        "mode": "scalp",
-                        "account_balance": 10000.0,
-                    })
+        mock_routing_result = RoutingResult(
+            result=json.loads(MOCK_ANALYSIS_RESPONSE),
+            models_tried=[{"tier": "standard", "model": "local", "confidence": 78, "direction": "BUY"}],
+            escalated=False,
+            total_latency_ms=500,
+            strategy="cost_optimized",
+            cost_saved_pct=0.0,
+        )
+        mock_routing_result.result["prompt_version"] = "v1"
+        mock_routing_result.result["consensus"] = {"agree": 2, "total": 2, "direction": "BUY"}
 
-                    assert response.status_code == 200
-                    data = response.json()
-                    assert data["direction"] in ["BUY", "SELL", "NEUTRAL"]
-                    assert "levels" in data
-                    assert "consensus" in data
-                    assert "latency_ms" in data
-                    assert data["provider_used"] == "local"
+        with patch("app.routes.analysis.route_analysis", new_callable=AsyncMock) as mock_route:
+            mock_route.return_value = mock_routing_result
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                response = await client.post("/api/analyze", json={
+                    "provider": "local",
+                    "image_base64": "dGVzdA==",
+                    "timeframe": "1-Min",
+                    "mode": "scalp",
+                    "account_balance": 10000.0,
+                })
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["direction"] in ["BUY", "SELL", "NEUTRAL"]
+                assert "levels" in data
+                assert "consensus" in data
+                assert "latency_ms" in data
+                assert data["provider_used"] == "local"
 
     @pytest.mark.asyncio
     async def test_full_trade_lifecycle(self):
