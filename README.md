@@ -4,7 +4,7 @@
 
 **Chart Sniper** is an intelligent trading analysis terminal that uses large language models (LLMs) to analyze financial chart screenshots and generate risk-managed trade setups. Upload a chart, select your timeframe, and let AI identify patterns, reversals, and optimal entry/exit points — all with built-in risk management.
 
-**Built by [Dean Krotzer](https://github.com/DeanKrotzer1111)**
+**Developed with AI by [Dean Krotzer](https://github.com/DeanKrotzer1111)**
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
