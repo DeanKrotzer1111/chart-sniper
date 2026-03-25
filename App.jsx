@@ -10,8 +10,10 @@ import LearningPage from './components/LearningPage';
 import SettingsPage from './components/SettingsPage';
 import PlansPage from './components/PlansPage';
 import SupportPage from './components/SupportPage';
+import LandingPage from './components/LandingPage';
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [page, setPage] = useState('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [journal, setJournal] = useState([]);
@@ -34,10 +36,14 @@ export default function App() {
     }
   };
 
+  if (showLanding) {
+    return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+  }
+
   return (
     <div style={{ display:'flex', height:'100vh', width:'100vw', fontFamily:"'DM Sans', -apple-system, sans-serif", color:'#e2e8f0', overflow:'hidden' }}>
       <GridBg />
-      <Sidebar page={page} setPage={setPage} collapsed={collapsed} setCollapsed={setCollapsed} />
+      <Sidebar page={page} setPage={setPage} collapsed={collapsed} setCollapsed={setCollapsed} onLogoClick={() => setShowLanding(true)} />
       <main style={{ flex:1, overflowY:'auto', padding:'28px 32px', position:'relative', zIndex:1 }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>{render()}</div>
       </main>

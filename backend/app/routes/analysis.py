@@ -18,7 +18,7 @@ from app.services.cache import get_cache
 from app.services.cost import AnalysisCost, estimate_image_tokens, estimate_text_tokens
 from app.db.database import log_analysis
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", tags=["Analysis"])
 limiter = Limiter(key_func=get_remote_address)
 
 

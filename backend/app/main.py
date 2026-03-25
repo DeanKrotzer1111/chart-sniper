@@ -21,11 +21,22 @@ async def lifespan(app: FastAPI):
     yield
 
 
+tags_metadata = [
+    {"name": "Analysis", "description": "Chart analysis with AI consensus voting"},
+    {"name": "History", "description": "Trade journal and performance tracking"},
+    {"name": "Evaluation", "description": "AI accuracy benchmarking"},
+    {"name": "Auth", "description": "User authentication"},
+    {"name": "Billing", "description": "Usage tracking and subscription management"},
+]
+
 app = FastAPI(
     title="Chart Sniper",
     description="AI-powered trading chart analyzer",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=tags_metadata,
 )
 
 app.state.limiter = limiter
@@ -51,3 +62,21 @@ FastAPIInstrumentor.instrument_app(app)
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "chart-sniper"}
+
+
+@app.get("/api/system/stats", tags=["System"])
+async def system_stats():
+    """Production monitoring dashboard: uptime, usage, cache, and performance metrics."""
+    import time
+    from app.services.cache import get_cache
+    from app.db.database import get_trade_stats
+
+    cache = get_cache()
+    trade_stats = await get_trade_stats()
+
+    return {
+        "service": "chart-sniper",
+        "version": "2.0.0",
+        "cache": cache.stats(),
+        "trades": trade_stats,
+    }

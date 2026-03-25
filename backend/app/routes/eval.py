@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.eval.benchmark import run_benchmark
 from app.db.database import get_eval_runs
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", tags=["Evaluation"])
 
 
 @router.post("/eval/run")

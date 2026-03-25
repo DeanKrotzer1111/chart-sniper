@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from typing import Optional
 from app.services.auth import get_current_user, require_auth, User, SUPABASE_URL
 
-router = APIRouter(prefix="/api/auth")
+router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 
 @router.get("/me")

@@ -19,7 +19,7 @@ from app.services.billing import (
     STRIPE_SECRET_KEY,
 )
 
-router = APIRouter(prefix="/api/billing")
+router = APIRouter(prefix="/api/billing", tags=["Billing"])
 
 
 @router.get("/usage")

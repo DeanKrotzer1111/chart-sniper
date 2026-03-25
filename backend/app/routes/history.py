@@ -9,7 +9,7 @@ from app.services.auth import get_current_user, User
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", tags=["History"])
 
 
 @router.get("/history")

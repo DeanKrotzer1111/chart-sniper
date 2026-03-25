@@ -7,12 +7,13 @@
 **Developed with AI by [Dean Krotzer](https://github.com/DeanKrotzer1111)**
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
-![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-121%20passing-brightgreen)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![CI](https://github.com/DeanKrotzer1111/chart-sniper/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -213,6 +214,37 @@ cd backend && make test     # Backend: 61 tests (unit + integration)
 | `POST` | `/api/eval/run` | Run evaluation benchmark |
 | `GET` | `/api/eval/results` | List past evaluation runs |
 | `GET` | `/api/cache/stats` | LLM response cache hit/miss statistics |
+
+### Example API Usage
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Run chart analysis
+curl -X POST http://localhost:8000/api/analyze \
+  -H "Content-Type: application/json" \
+  -H "X-Api-Key: your-api-key-here" \
+  -d '{
+    "provider": "claude",
+    "image_base64": "<base64-encoded-chart-image>",
+    "timeframe": "1-Min",
+    "mode": "scalp",
+    "account_balance": 10000,
+    "strategy": "cost_optimized"
+  }'
+
+# Check usage and billing
+curl http://localhost:8000/api/billing/usage \
+  -H "Authorization: Bearer your-jwt-token"
+
+# Get cache statistics
+curl http://localhost:8000/api/cache/stats
+
+# Interactive API docs
+# Visit http://localhost:8000/docs for Swagger UI
+# Visit http://localhost:8000/redoc for ReDoc
+```
 
 ---
 
